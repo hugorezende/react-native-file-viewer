@@ -90,31 +90,37 @@ public class RNFileViewerModule extends ReactContextBaseJavaModule {
       intentActivity = shareIntent;
     }
 
-    PackageManager pm = getCurrentActivity().getPackageManager();
-
-    if (shareIntent.resolveActivity(pm) != null) {
-      try {
-        getCurrentActivity().startActivityForResult(intentActivity, currentId + RN_FILE_VIEWER_REQUEST);
-        sendEvent(OPEN_EVENT, currentId, null);
-      }
-      catch(Exception e) {
-        sendEvent(OPEN_EVENT, currentId, e.getMessage());
-      }
-      } else {
+    try {
+      // Try open the file with the default app (fix for Android 11 on application/zip)
+      getCurrentActivity().startActivityForResult(intentActivity, currentId + RN_FILE_VIEWER_REQUEST);
+    } catch (Exception e) {
+      
+      PackageManager pm = getCurrentActivity().getPackageManager();
+      if (shareIntent.resolveActivity(pm) != null) {
         try {
-          if (showStoreSuggestions) {
-            if(mimeType == null) {
-              throw new Exception("It wasn't possible to detect the type of the file");
-            }
-            Intent storeIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=" + mimeType + "&c=apps"));
-            getCurrentActivity().startActivity(storeIntent);
-          }
-          throw new Exception("No app associated with this mime type");
+          getCurrentActivity().startActivityForResult(intentActivity, currentId + RN_FILE_VIEWER_REQUEST);
+          sendEvent(OPEN_EVENT, currentId, null);
         }
         catch(Exception e) {
           sendEvent(OPEN_EVENT, currentId, e.getMessage());
         }
-      }
+        } else {
+          try {
+            if (showStoreSuggestions) {
+              if(mimeType == null) {
+                throw new Exception("It wasn't possible to detect the type of the file");
+              }
+              Intent storeIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://search?q=" + mimeType + "&c=apps"));
+              getCurrentActivity().startActivity(storeIntent);
+            }
+            throw new Exception("No app associated with this mime type");
+          }
+          catch(Exception e) {
+            sendEvent(OPEN_EVENT, currentId, e.getMessage());
+          }
+        }
+    }
+    
   }
 
   @Override
